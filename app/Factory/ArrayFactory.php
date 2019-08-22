@@ -8,10 +8,19 @@ class ArrayFactory
     public function maxSameRow($remainder)
     {
         $c = collect($this->cube($remainder));
-
         foreach ($c as $row) {
+            $rows = collect($row);
+            $count_x = $rows->filter(function ($value) {
+                return $value == 1;
+            })->count();
 
+            $count_y = $rows->filter(function ($value) {
+                return $value == 2;
+            })->count();
+            $max = max($count_x, $count_y);
+            if ($max == 3) return $max;
         }
+
     }
 
     public function maxSameColumn($remainder)
