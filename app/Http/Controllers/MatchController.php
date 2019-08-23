@@ -47,7 +47,7 @@ class MatchController extends Controller {
     public function move(Board $board)
     {
 
-        if ($board->winner != 1 ){
+        if ($board->winner == 0){
             $data = [];
             $boards = $board->board;
             $data['next'] = $board->next == 1 ? 2 : 1;
@@ -55,7 +55,7 @@ class MatchController extends Controller {
             if (!empty($boards[$position])) return response()->json(['error' => 'posision ocupada']);
             $boards[$position] = $data['next'];
             $data['board'] = $boards;
-            if ($this->hasWon($boards)) $data['winner'] = 1;
+            if ($this->hasWon($boards)) $data['winner'] = $data['next'];
             $board->update($data);
             return response()->json($board);
         }
@@ -106,17 +106,17 @@ class MatchController extends Controller {
 
     private function hasWon($spaces)
     {
-        $factory = new ArrayFactory();
+        $factory = new ArrayFactory($spaces);
         // Check if three in a row in any direction
-        if ($factory->maxSameRow($spaces) == 3) {
+        if ($factory->maxSameRow() == 3) {
             return true;
         }
-        /**if ($factory->maxSameColumn($spaces) == 3) {
+        if ($factory->maxSameColumn() == 3) {
             return true;
         }
-        /*if ($factory->maxDiagonal($spaces) == 3) {
+        if ($factory->maxDiagonal($spaces) == 3) {
             return true;
-        }*/
+        }
         return false;
     }
 

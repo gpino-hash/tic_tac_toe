@@ -5,92 +5,110 @@ use Illuminate\Support\Arr;
 
 class ArrayFactory
 {
-    public function maxSameRow($remainder)
+    private $collection, $max_count;
+
+    public function __construct(array $collection)
     {
-        $c = collect($this->cube($remainder));
-        foreach ($c as $row) {
-            $rows = collect($row);
-            $count_x = $rows->filter(function ($value) {
-                return $value == 1;
-            })->count();
-
-            $count_y = $rows->filter(function ($value) {
-                return $value == 2;
-            })->count();
-            $max = max($count_x, $count_y);
-            if ($max == 3) return $max;
-        }
-
+        $this->collection = collect($collection)->split(3);
+        $this->max_count = 0;
     }
 
-    public function maxSameColumn($remainder)
+    public function maxSameRow()
     {
-        $c = $this->cube($remainder);
-        $value = array_column($remainder, 0);
-
-        dd($value);
-
-    }
-    public function maxDiagonal($remainder,$size = 3)
-    {
-        $remainder = collect($remainder);
-        $remainder = $remainder->filter(function ($value) use ($size) {
-            return $value[0] == $value[1] || $value[0] + $value[1] == $size + 1;
-        });
         $max_count = 0;
-        // Check diagonals relative to every square (no discarding)
-        foreach ($remainder as $square) {
-            $negative_diagonal_count = 0;
-            // Positive slope, count squares to left and below
-            $next_square = $square;
-            while (!empty($next_square)) {
-                $negative_diagonal_count = $negative_diagonal_count + 1;
-                $next_square = $remainder->first(function ($value) use ($next_square) {
-                    return $value[0] == $next_square[0] + 1 && $value[1] == $next_square[1] - 1;
+
+        if (!$this->collection->isEmpty()) {
+            foreach ($this->collection as $row){
+                $row_number = head($row);
+                $row_count = $row->filter(function ($value) use ($row_number) {
+                    return $value == head($row_number) && $value != 0;
+                })->count();
+
+                if ($row_count > $max_count) {
+                    // Keep count if greatest
+                    $max_count = $row_count;
+                }
+                // Discard squares on row once counted
+                $row = $row->reject(function ($value) use ($row_number) {
+                    return $value == $row_number && $value != 0;
                 });
-            }
-            $next_square = $square;
-            // Positive slope, count squares to right and above
-            $negative_diagonal_count = $negative_diagonal_count - 1;
-            while (!empty($next_square)) {
-                $negative_diagonal_count = $negative_diagonal_count + 1;
-                $next_square = $remainder->first(function ($value) use ($next_square) {
-                    return $value[0] == $next_square[0] - 1 && $value[1] == $next_square[1] + 1;
-                });
-            }
-            $positive_diagonal_count = 0;
-            // Negative slope, count squares to right and below
-            $next_square = $square;
-            while (!empty($next_square)) {
-                $positive_diagonal_count = $positive_diagonal_count + 1;
-                $next_square = $remainder->first(function ($value) use ($next_square) {
-                    return $value[0] == $next_square[0] + 1 && $value[1] == $next_square[1] + 1;
-                });
-            }
-            // Negative slope, count squares to left and above
-            $next_square = $square;
-            $positive_diagonal_count = $positive_diagonal_count - 1;
-            while (!empty($next_square)) {
-                $positive_diagonal_count = $positive_diagonal_count + 1;
-                $next_square = $remainder->first(function ($value) use ($next_square) {
-                    return $value[0] == $next_square[0] - 1 && $value[1] == $next_square[1] - 1;
-                });
-            }
-            if ($positive_diagonal_count > $max_count) {
-                $max_count = $positive_diagonal_count;
-            }
-            if ($negative_diagonal_count > $max_count) {
-                $max_count = $negative_diagonal_count;
             }
         }
 
         return $max_count;
+
     }
 
-    function cube($remainder) {
-        $one = array_slice($remainder, 0, 3);
-        $two = array_slice($remainder, 2, 3);
-        $three = array_slice($remainder, 6, 3);
-        return Arr::collapse([[$one], [$two], [$three]]);
+    public function maxSameColumn()
+    {
+        $data = [];
+
+        if (!$this->collection->isEmpty()) {
+            # Cambiando collection a array
+            $arry = Arr::collapse([
+                [array_values($this->collection->toArray()[0])],
+                [array_values($this->collection->toArray()[1])],
+                [array_values($this->collection->toArray()[2])]
+            ]);
+            # Organizando el array a columnas
+            foreach ($arry as $key => $value) {
+                foreach ($value as $k => $v) {
+                    $data[$k][] = $v;
+                }
+            }
+            foreach ($data as $k => $v) {
+                $col[] = collect($v)->filter(function ($value) use ($v) {
+                    $head = head($v);
+                    return $value == $head && $value != 0;
+                })->count();
+            }
+
+            return max($col);
+        }
     }
+
+    public function maxDiagonal()
+    {
+        if (!$this->collection->isEmpty()) {
+            # Cambiando collection a array
+            $arry = Arr::collapse([
+                [array_values($this->collection->toArray()[0])],
+                [array_values($this->collection->toArray()[1])],
+                [array_values($this->collection->toArray()[2])]
+            ]);
+            # Organizando el array a columnas
+            foreach ($arry as $key => $value) {
+                foreach ($value as $k => $v) {
+                    $data[$k][] = $v;
+                }
+            }
+            #Comprobando la validacion
+            foreach ($data as $k => $v) {
+                # Diagonal
+                $col1[$k] = array_fill_keys([$k],$v[$k]);
+            }
+
+            $data2 = array_reverse($data);
+            #Comprobando la validacion
+            foreach ($data2 as $k => $v) {
+                # Diagonal
+                $col2[$k] = array_fill_keys([$k],$v[$k]);
+            }
+
+            $col1 = Arr::collapse($col1);
+            $col1 = collect($col1)->filter(function ($value) use ($col1) {
+                $head = head($col1);
+                return $value == $head && $value != 0;
+            })->count();
+
+            $col2 = Arr::collapse($col2);
+            $col2 = collect($col2)->filter(function ($value) use ($col2) {
+                $head = head($col2);
+                return $value == $head && $value != 0;
+            })->count();
+            return max([$col1, $col2]);
+
+        }
+    }
+
 }
