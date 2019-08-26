@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Board;
 use App\Factory\ArrayFactory;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Input;
 
+/**
+ * Class MatchController
+ * @package App\Http\Controllers
+ */
 class MatchController extends Controller {
-
-    public function index() {
-        return view('index');
-    }
 
     /**
      * Returns a list of matches
@@ -19,7 +20,8 @@ class MatchController extends Controller {
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function matches() {
+    public function matches()
+    {
         return response()->json($this->fakeMatches());
     }
 
@@ -28,12 +30,17 @@ class MatchController extends Controller {
      *
      * TODO it's mocked, make this work :)
      *
-     * @param $id
+     * @param $board
      * @return \Illuminate\Http\JsonResponse
      */
-    public function match(Board $id)
+    public function match(Board $board)
     {
-        return response()->json($id);
+
+        if (empty($board->id)) {
+            throw new ModelNotFoundException('Board not found by ID ' . $board->id);
+        }
+
+        return response()->json($board);
     }
 
     /**
@@ -41,24 +48,32 @@ class MatchController extends Controller {
      *
      * TODO it's mocked, make this work :)
      *
-     * @param $id
+     * @param Board $board
      * @return \Illuminate\Http\JsonResponse
      */
     public function move(Board $board)
     {
-
-        if ($board->winner == 0){
-            $data = [];
-            $boards = $board->board;
-            $data['next'] = $board->next == 1 ? 2 : 1;
-            $position = Input::get('position');
-            if (!empty($boards[$position])) return response()->json(['error' => 'posision ocupada']);
-            $boards[$position] = $data['next'];
-            $data['board'] = $boards;
-            if ($this->hasWon($boards)) $data['winner'] = $data['next'];
-            $board->update($data);
-            return response()->json($board);
+        try {
+            if ($board->winner == 0){
+                $validator = \Validator::make(Input::get(), [
+                    "position" => 'required|numeric'
+                ]);
+                if ($validator->fails()) return response()->json($validator->errors(), 422);
+                $data = [];
+                $boards = $board->board;
+                $data['next'] = $board->next == Board::X ? Board::O : Board::X;
+                $position = Input::get('position');
+                if (!empty($boards[$position])) return response()->json(['error' => 'occupied position'], 422);
+                $boards[$position] = $data['next'];
+                $data['board'] = $boards;
+                if ($this->hasWon($boards)) $data['winner'] = $data['next'];
+                $board->update($data);
+                return response()->json($board);
+            }
+        } catch (\Exception $exception) {
+            response()->json($exception->getMessage(), 500);
         }
+
 
     }
 
@@ -71,13 +86,18 @@ class MatchController extends Controller {
      */
     public function create()
     {
-        $board = Board::query();
+        try {
+            $board = Board::query();
 
-        $board->create([
-            'name' => 'Match '.($board->get()->last()['id']),
-            'next' => 1,
-        ]);
-        return response()->json($board->get());
+            $board->create([
+                'name' => 'Match '.($board->get()->last()['id']),
+                'next' => 1,
+            ]);
+            return response()->json($board->get());
+        } catch (\Exception $e) {
+            response()->json($e->getMessage(), 500);
+        }
+
     }
 
     /**
@@ -85,12 +105,13 @@ class MatchController extends Controller {
      *
      * TODO it's mocked, make this work :)
      *
-     * @param $id
+     * @param Board $board
      * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
      */
-    public function delete(Board $id)
+    public function delete(Board $board)
     {
-        $id->delete();
+        $board->delete();
         return response()->json($this->fakeMatches());
     }
 
@@ -104,6 +125,10 @@ class MatchController extends Controller {
         return Board::all();
     }
 
+    /**
+     * @param $spaces
+     * @return bool
+     */
     private function hasWon($spaces)
     {
         $factory = new ArrayFactory($spaces);
@@ -114,7 +139,7 @@ class MatchController extends Controller {
         if ($factory->maxSameColumn() == 3) {
             return true;
         }
-        if ($factory->maxDiagonal($spaces) == 3) {
+        if ($factory->maxDiagonal() == 3) {
             return true;
         }
         return false;

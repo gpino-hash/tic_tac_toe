@@ -16,10 +16,10 @@ export default {
     move: ({id, position}) => {
         return axios.put(URL_MOVE + id, {
             position: position
-        })
+        }).catch(console.log)
     },
     create: () => {
-        return axios.post(URL_CREATE)
+        return axios.post(URL_CREATE).catch(console.log)
     },
     destroy: ({id}) => {
         return axios.delete(URL_DELETE + id)

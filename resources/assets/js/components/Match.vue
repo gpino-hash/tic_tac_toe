@@ -74,13 +74,8 @@
                 return value === 1 ? 'X' : (value === 2 ? 'O' : '');
             },
             move(position) {
-                console.log(this.match);
                 if (this.match.next !== this.currentPlayer) {
                     alert('Not your turn!');
-                    return;
-                }
-                if (this.match.error) {
-                    alert(this.match.error);
                     return;
                 }
                 this.$emit('move', {

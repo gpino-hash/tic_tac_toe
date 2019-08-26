@@ -1,18 +1,42 @@
 <?php
 namespace App\Factory;
 
+use App\Exceptions\MaxArrayException;
 use Illuminate\Support\Arr;
 
+/**
+ * Class ArrayFactory
+ * @package App\Factory
+ */
 class ArrayFactory
 {
-    private $collection, $max_count;
+    /**
+     * @var \Illuminate\Support\Collection
+     */
+    private $collection, $max_count, $array;
 
+    /**
+     * ArrayFactory constructor.
+     * @param array $collection
+     */
     public function __construct(array $collection)
     {
+        if ( count($collection) != 9 ) throw MaxArrayException::countArray();
+
         $this->collection = collect($collection)->split(3);
         $this->max_count = 0;
+        # Changing collection to array
+        $this->array = Arr::collapse([
+            [array_values($this->collection->toArray()[0])],
+            [array_values($this->collection->toArray()[1])],
+            [array_values($this->collection->toArray()[2])]
+        ]);
     }
 
+    /**
+     * row check
+     * @return int
+     */
     public function maxSameRow()
     {
         $max_count = 0;
@@ -29,7 +53,7 @@ class ArrayFactory
                     $max_count = $row_count;
                 }
                 // Discard squares on row once counted
-                $row = $row->reject(function ($value) use ($row_number) {
+                $row->reject(function ($value) use ($row_number) {
                     return $value == $row_number && $value != 0;
                 });
             }
@@ -39,19 +63,19 @@ class ArrayFactory
 
     }
 
+    /**
+     * column check
+     * @return mixed
+     */
     public function maxSameColumn()
     {
         $data = [];
+        $col = [];
 
         if (!$this->collection->isEmpty()) {
-            # Cambiando collection a array
-            $arry = Arr::collapse([
-                [array_values($this->collection->toArray()[0])],
-                [array_values($this->collection->toArray()[1])],
-                [array_values($this->collection->toArray()[2])]
-            ]);
+
             # Organizando el array a columnas
-            foreach ($arry as $key => $value) {
+            foreach ($this->array as $key => $value) {
                 foreach ($value as $k => $v) {
                     $data[$k][] = $v;
                 }
@@ -67,31 +91,32 @@ class ArrayFactory
         }
     }
 
+    /**
+     * Diagonal check
+     * @return mixed
+     */
     public function maxDiagonal()
     {
         if (!$this->collection->isEmpty()) {
-            # Cambiando collection a array
-            $arry = Arr::collapse([
-                [array_values($this->collection->toArray()[0])],
-                [array_values($this->collection->toArray()[1])],
-                [array_values($this->collection->toArray()[2])]
-            ]);
-            # Organizando el array a columnas
-            foreach ($arry as $key => $value) {
+
+            # Organizing the array to columns
+            foreach ($this->array as $key => $value) {
                 foreach ($value as $k => $v) {
                     $data[$k][] = $v;
                 }
             }
-            #Comprobando la validacion
+            # Checking the validation
             foreach ($data as $k => $v) {
                 # Diagonal
                 $col1[$k] = array_fill_keys([$k],$v[$k]);
             }
 
+            # Inverting the array
             $data2 = array_reverse($data);
-            #Comprobando la validacion
+
+            # Checking the validation
             foreach ($data2 as $k => $v) {
-                # Diagonal
+                # Diagonal reverse
                 $col2[$k] = array_fill_keys([$k],$v[$k]);
             }
 
