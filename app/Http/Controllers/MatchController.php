@@ -91,7 +91,7 @@ class MatchController extends Controller {
 
             $board->create([
                 'name' => 'Match '.($board->get()->last()['id']),
-                'next' => 1,
+                'next' => Board::X,
             ]);
             return response()->json($board->get());
         } catch (\Exception $e) {
